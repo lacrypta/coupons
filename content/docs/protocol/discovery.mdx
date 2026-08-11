@@ -1,0 +1,46 @@
+---
+title: Discovery
+description: Kind 30078 — the merchant announces where coupons live.
+---
+
+Signed by **the merchant**, published to relays. It is the only thing that lets somebody else's till find this service.
+
+```jsonc
+{
+  "kind": 30078,
+  "pubkey": "<merchant hex>",
+  "tags": [
+    ["d", "lacrypta.merchant/coupons"],
+    ["p", "<manager hex>"],
+    ["client", "merchant-manager"]
+  ],
+  "content": "{\"v\":2,\"mintUrl\":\"https://merchant.lacrypta.ar/api/coupons/mint\",\"claimUrl\":\"https://merchant.lacrypta.ar/api/coupons/claim\"}"
+}
+```
+
+## Wire split
+
+| Where | Field | Meaning |
+|---|---|---|
+| content | `v` | Must be `2`. Anything else is discarded whole |
+| tag | `p` | Manager hex — vouchers verify against this |
+| content | `mintUrl` | Absolute POST URL |
+| content | `claimUrl` | Absolute GET/POST URL |
+
+**Manager key is a tag, not content** — relays index tags. Filter `{"kinds":[30078],"#d":["lacrypta.merchant/coupons"],"#p":["<manager>"]}` instead of downloading every announcement.
+
+## Read it correctly
+
+1. Fetch the **newest** event by author + `d`
+2. **Then** read the `p` tag
+
+Never subscribe filtering by `#p` alone. Addressable events can hand back an older version that still names you while the current one names someone else.
+
+## Rules
+
+- Content is **plaintext** (this is an announcement, not credentials)
+- URLs must be `https` (localhost allowed for `npm run dev`)
+- `v1` announcements (manager inside content, no `p`) are **dead** — merchants must re-sign
+- Kind 30078 is addressable: moving hosts is editing one event
+
+Get the manager pubkey from [`GET /api/coupons/manager`](/docs/api), then sign and [`PUT /api/coupons/discovery`](/docs/api).

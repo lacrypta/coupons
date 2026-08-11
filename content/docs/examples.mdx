@@ -1,0 +1,51 @@
+---
+title: Examples
+description: Compact snippets — discovery, mint, claim.
+---
+
+## Discovery content (v2)
+
+```json
+{
+  "v": 2,
+  "mintUrl": "https://merchant.lacrypta.ar/api/coupons/mint",
+  "claimUrl": "https://merchant.lacrypta.ar/api/coupons/claim"
+}
+```
+
+Manager pubkey is tag `p` on the event — not in this JSON.
+
+## Mint
+
+```bash
+curl -X POST https://merchant.lacrypta.ar/api/coupons/mint \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"couponId":"55b5ee4f-4dcc-4a6a-a58e-6d1d94d811a3"}'
+```
+
+## Preview
+
+```bash
+curl "https://merchant.lacrypta.ar/api/coupons/claim?nonce=hcLPDzERvvHzS4Vn0OLbAQ"
+```
+
+## Redeem
+
+```bash
+curl -X POST https://merchant.lacrypta.ar/api/coupons/claim \
+  -H "Content-Type: application/json" \
+  -d '{"nonce":"hcLPDzERvvHzS4Vn0OLbAQ"}'
+```
+
+## Benefits
+
+```jsonc
+{ "type": "percent", "percent": 20, "cap": { "amount": 5000, "currency": "ARS" } }
+{ "type": "fixed", "amount": 500, "currency": "ARS" }
+{ "type": "multibuy", "buyQty": 2, "payQty": 1, "productDs": ["…"] }
+{ "type": "buyXgetY", "buyProductD": "…", "giftProductD": "…" }
+{ "type": "freeItems", "items": [{ "d": "…", "qty": 2 }] }
+```
+
+Full client with NIP-98 signing: see the [API playground](/docs/api) and the live app at [merchant.lacrypta.ar](https://merchant.lacrypta.ar).

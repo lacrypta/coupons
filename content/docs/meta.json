@@ -1,0 +1,17 @@
+{
+  "title": "coupons",
+  "description": "Nostr coupon protocol",
+  "root": true,
+  "pages": [
+    "index",
+    "---Protocol---",
+    "...protocol",
+    "flows",
+    "---API---",
+    "api",
+    "...api",
+    "---Guides---",
+    "...guides",
+    "examples"
+  ]
+}

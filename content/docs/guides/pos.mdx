@@ -1,0 +1,22 @@
+---
+title: POS integration
+description: Checklist for a till that never talked to us before.
+---
+
+## Checklist
+
+1. **Read discovery** — newest kind `30078` for the merchant pubkey with `d = lacrypta.merchant/coupons`
+2. **Take `p`, `mintUrl`, `claimUrl`** — ignore `v ≠ 2`
+3. **List mintable** — `GET /api/coupons/mintable` with NIP-98 (or session)
+4. **Mint** — `POST mintUrl` with `{ couponId }`
+5. **Verify voucher** — `voucher.pubkey === p`, signature valid, content matches JSON
+6. **Show QR** — the nonce is the credential
+7. **Redeem** — `POST claimUrl` with `{ nonce }`
+8. **Handle `claimed`** — same as success for retries; use original `claimedAt`
+
+## Don't
+
+- Filter relays by `#p` alone
+- Trust TLS host alone without checking manager signature
+- Skip `npub` check on claim if you are a multi-merchant client
+- Blind-retry `POST /mint` after a lost response — reconcile via mints list

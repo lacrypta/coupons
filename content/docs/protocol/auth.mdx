@@ -1,0 +1,47 @@
+---
+title: Auth
+description: NIP-98 and Bearer sessions — same tenant, different trade-offs.
+---
+
+| Route | Auth |
+|---|---|
+| `POST /api/auth/session` | NIP-98 **only** |
+| Management + mint | NIP-98 **or** Bearer |
+| Claim GET/POST | None — the **nonce** is the credential |
+| `GET /api/coupons/manager` | None |
+
+## NIP-98
+
+Kind `27235` in `Authorization: Nostr <base64>`.
+
+Verified cheap-first: shape → kind → **signature** → ±60s → `method` → `u` → optional `payload` sha256.
+
+```jsonc
+{
+  "kind": 27235,
+  "created_at": 1764630000,
+  "content": "",
+  "tags": [
+    ["u", "https://merchant.lacrypta.ar/api/coupons/mint"],
+    ["method", "POST"],
+    ["payload", "<sha256 hex of body>"],
+    ["nonce", "k3f9xq2"]   // make the event unique — avoid replay
+  ]
+}
+```
+
+Without a unique tag, two identical requests in the same second hash to the same id. Second call → `reason: "replay"`.
+
+## Bearer
+
+Sign NIP-98 once → `POST /api/auth/session` → `Authorization: Bearer <jwt>` for 12 hours.
+
+It is not more secure — it is fewer signatures. On a NIP-46 bunker, every NIP-98 is a round trip to the merchant's phone.
+
+- Re-mint on any `401`
+- No logout — drop the token
+- Rotate `SESSION_JWT_SECRET` to invalidate everything
+
+## Error `reason` values
+
+`expired` · `replay` · `url-mismatch` · `session-expired` · `session-invalid` · `malformed` · `missing` · `too-large`

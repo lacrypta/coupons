@@ -1,0 +1,113 @@
+@import 'tailwindcss';
+@import 'fumadocs-ui/css/black.css';
+@import 'fumadocs-ui/css/preset.css';
+@import 'fumadocs-openapi/css/preset.css';
+
+@font-face {
+  font-family: 'Standerd';
+  src: url('/fonts/Standerd-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Standerd';
+  src: url('/fonts/Standerd-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Standerd';
+  src: url('/fonts/Standerd-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Standerd';
+  src: url('/fonts/Standerd-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+html {
+  scrollbar-gutter: stable;
+  color-scheme: dark;
+}
+
+html > body[data-scroll-locked] {
+  margin-right: 0px !important;
+  --removed-body-scroll-bar-size: 0px !important;
+}
+
+:root {
+  --font-sans: 'Standerd', ui-sans-serif, system-ui, sans-serif;
+  --fd-layout-width: 1400px;
+
+  --color-fd-background: #0a0a0a;
+  --color-fd-foreground: #f2f2f2;
+  --color-fd-muted: #161616;
+  --color-fd-muted-foreground: #a3a3a3;
+  --color-fd-popover: #0f0f0f;
+  --color-fd-popover-foreground: #f2f2f2;
+  --color-fd-card: #0f0f0f;
+  --color-fd-card-foreground: #f2f2f2;
+  --color-fd-border: #262626;
+  --color-fd-primary: #b4f953;
+  --color-fd-primary-foreground: #0a0a0a;
+  --color-fd-secondary: #1f1f1f;
+  --color-fd-secondary-foreground: #f2f2f2;
+  --color-fd-accent: #1a1a1a;
+  --color-fd-accent-foreground: #f2f2f2;
+  --color-fd-ring: #b4f953;
+
+  --grid-line: color-mix(in srgb, #b4f953 12%, transparent);
+}
+
+.dark {
+  --color-fd-background: #0a0a0a;
+  --color-fd-foreground: #f2f2f2;
+  --color-fd-muted: #161616;
+  --color-fd-muted-foreground: #a3a3a3;
+  --color-fd-popover: #0f0f0f;
+  --color-fd-popover-foreground: #f2f2f2;
+  --color-fd-card: #0f0f0f;
+  --color-fd-card-foreground: #f2f2f2;
+  --color-fd-border: #262626;
+  --color-fd-primary: #b4f953;
+  --color-fd-primary-foreground: #0a0a0a;
+  --color-fd-secondary: #1f1f1f;
+  --color-fd-secondary-foreground: #f2f2f2;
+  --color-fd-accent: #1a1a1a;
+  --color-fd-accent-foreground: #f2f2f2;
+  --color-fd-ring: #b4f953;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-fd-background);
+  color: var(--color-fd-foreground);
+}
+
+.grid-backdrop {
+  background-color: #0a0a0a;
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 64px 64px;
+  background-position: center top;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 20%, #000 20%, transparent 75%);
+}
+
+.hero-glow {
+  background: radial-gradient(
+    ellipse 60% 50% at 50% 0%,
+    color-mix(in srgb, #b4f953 18%, transparent),
+    transparent 70%
+  );
+}

@@ -1,0 +1,1068 @@
+openapi: 3.1.0
+info:
+  title: Coupons API
+  version: "1.0.0"
+  summary: Mint and redeem Nostr-advertised coupons
+  description: |
+    HTTP surface for the coupon manager. Merchants advertise this service with a
+    signed kind **30078**; vouchers are signed as kind **20402** and never published.
+
+    Live implementation: https://merchant.lacrypta.ar
+
+    Auth is NIP-98 (`Authorization: Nostr <base64>`) or a Bearer session minted
+    from it. Claim endpoints use the **nonce** as the credential — no auth header.
+  contact:
+    name: La Crypta
+    url: https://lacrypta.ar
+servers:
+  - url: https://merchant.lacrypta.ar
+    description: Production (Merchant Manager)
+tags:
+  - name: Auth
+    description: Session minting
+  - name: Manager
+    description: Public manager identity
+  - name: Discovery
+    description: Merchant announcement (kind 30078)
+  - name: Definitions
+    description: Coupon definitions
+  - name: Mint
+    description: Issue vouchers
+  - name: Claim
+    description: Preview and redeem
+  - name: Minters
+    description: Authorized minting keys
+  - name: Redemptions
+    description: Redemption history
+paths:
+  /api/auth/session:
+    post:
+      tags: [Auth]
+      summary: Mint a Bearer session
+      description: |
+        Trade a NIP-98 signature for a 12h JWT. No body — the event already binds
+        `u` and `method`.
+      operationId: createSession
+      security:
+        - Nostr: []
+      responses:
+        "200":
+          description: Session token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+              example:
+                token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9…
+                pubkey: 2ad91f1dca2dcd5fc89e7208d1e5059f0bac0870d63fc3bac21c7a9388fa18fd
+                expiresAt: 1762088400
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  /api/coupons/manager:
+    get:
+      tags: [Manager]
+      summary: Manager pubkey
+      description: Public key that signs vouchers. Cacheable (`max-age=300`).
+      operationId: getManager
+      security: []
+      responses:
+        "200":
+          description: Manager identity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ManagerResponse"
+              example:
+                pubkey: 9f5c4e2ab13d7f60c8a4e9021b6d5f38a7c04e91d2b8635fa0c7e41d9b6532af
+                npub: npub1na3388t8384asezn5sgxmd403c47qya36jhp3lgx8usa8dk2v40qx6emh9
+        "503":
+          $ref: "#/components/responses/Unavailable"
+
+  /api/coupons/discovery:
+    put:
+      tags: [Discovery]
+      summary: Store signed announcement
+      description: |
+        Stores the merchant-signed kind **30078**. This service does not mint the
+        event — it only remembers and re-broadcasts what the merchant already signed.
+      operationId: putDiscovery
+      security:
+        - Nostr: []
+        - Bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event]
+              properties:
+                event:
+                  $ref: "#/components/schemas/SignedEvent"
+      responses:
+        "200":
+          description: Stored announcement
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [event]
+                properties:
+                  event:
+                    $ref: "#/components/schemas/SignedEvent"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/coupons:
+    get:
+      tags: [Definitions]
+      summary: List coupons, minters, discovery
+      description: One round-trip for the management page — every request costs a signature.
+      operationId: listCoupons
+      security:
+        - Nostr: []
+        - Bearer: []
+      responses:
+        "200":
+          description: Bundle
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CouponsBundle"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    post:
+      tags: [Definitions]
+      summary: Create coupon definition
+      operationId: createCoupon
+      security:
+        - Nostr: []
+        - Bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCouponBody"
+            example:
+              name: 20% de verano
+              description: No acumulable.
+              image: null
+              benefit:
+                type: percent
+                percent: 20
+                cap:
+                  amount: 5000
+                  currency: ARS
+              maxUses: 100
+              expiresAt: null
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [coupon]
+                properties:
+                  coupon:
+                    $ref: "#/components/schemas/DefinitionJson"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/coupons/{id}:
+    parameters:
+      - $ref: "#/components/parameters/CouponId"
+    patch:
+      tags: [Definitions]
+      summary: Edit coupon definition
+      description: Editing does not change already-minted vouchers — benefit is frozen at mint.
+      operationId: patchCoupon
+      security:
+        - Nostr: []
+        - Bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchCouponBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [coupon]
+                properties:
+                  coupon:
+                    $ref: "#/components/schemas/DefinitionJson"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Definitions]
+      summary: Delete or archive
+      description: Deletes if never minted; archives otherwise.
+      operationId: deleteCoupon
+      security:
+        - Nostr: []
+        - Bearer: []
+      responses:
+        "200":
+          description: Result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: boolean
+                  archived:
+                    type: boolean
+              example:
+                deleted: false
+                archived: true
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/coupons/{id}/mints:
+    parameters:
+      - $ref: "#/components/parameters/CouponId"
+    get:
+      tags: [Mint]
+      summary: List issuances for a coupon
+      operationId: listMints
+      security:
+        - Nostr: []
+        - Bearer: []
+      responses:
+        "200":
+          description: Mints
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [mints]
+                properties:
+                  mints:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/MintJson"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/coupons/{id}/mints/{nonce}:
+    parameters:
+      - $ref: "#/components/parameters/CouponId"
+      - $ref: "#/components/parameters/NoncePath"
+    delete:
+      tags: [Mint]
+      summary: Void an unredeemed mint
+      operationId: voidMint
+      security:
+        - Nostr: []
+        - Bearer: []
+      responses:
+        "200":
+          description: Voided mint
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [mint]
+                properties:
+                  mint:
+                    $ref: "#/components/schemas/MintJson"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /api/coupons/mint:
+    post:
+      tags: [Mint]
+      summary: Mint a voucher
+      description: |
+        This is the `mintUrl` from the announcement. Signer must be the owner or
+        an authorized minter. Returns a nonce (bearer credential) and a signed
+        kind **20402** voucher (`phase: minted`).
+      operationId: mintCoupon
+      security:
+        - Nostr: []
+        - Bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [couponId]
+              properties:
+                couponId:
+                  type: string
+                  format: uuid
+            example:
+              couponId: 55b5ee4f-4dcc-4a6a-a58e-6d1d94d811a3
+      responses:
+        "200":
+          description: Minted payload + voucher
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MintResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "410":
+          $ref: "#/components/responses/Gone"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+
+  /api/coupons/claim:
+    get:
+      tags: [Claim]
+      summary: Preview a coupon (no consume)
+      description: |
+        Always `200` for a known nonce — status carries the reason
+        (`minted` | `claimed` | `expired` | `voided`). Check `npub` against the
+        merchant you are charging.
+      operationId: previewClaim
+      security: []
+      parameters:
+        - name: nonce
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 22
+            maxLength: 22
+      responses:
+        "200":
+          description: Preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClaimPreview"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Claim]
+      summary: Redeem a coupon
+      description: |
+        Consumes the nonce once. Already-claimed returns `200` with
+        `status: claimed` and the original `claimedAt` (safe to retry).
+      operationId: redeemClaim
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClaimBody"
+            example:
+              nonce: hcLPDzERvvHzS4Vn0OLbAQ
+      responses:
+        "200":
+          description: Redeemed or already claimed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClaimResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "410":
+          $ref: "#/components/responses/Gone"
+
+  /api/coupons/mintable:
+    get:
+      tags: [Mint]
+      summary: Coupons the caller can mint
+      description: Across every merchant that authorized this npub. For POS button lists.
+      operationId: listMintable
+      security:
+        - Nostr: []
+        - Bearer: []
+      responses:
+        "200":
+          description: Mintable coupons
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [coupons]
+                properties:
+                  coupons:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/MintableCoupon"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/coupons/minters:
+    get:
+      tags: [Minters]
+      summary: List authorized minters
+      operationId: listMinters
+      security:
+        - Nostr: []
+        - Bearer: []
+      responses:
+        "200":
+          description: Minters
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [minters]
+                properties:
+                  minters:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/MinterJson"
+    post:
+      tags: [Minters]
+      summary: Authorize a minter
+      description: Accepts npub, nprofile, hex, or NIP-05. Only hex is stored.
+      operationId: addMinter
+      security:
+        - Nostr: []
+        - Bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pubkey]
+              properties:
+                pubkey:
+                  type: string
+                  description: npub, nprofile, hex, or NIP-05
+                label:
+                  type: string
+                  nullable: true
+                  maxLength: 80
+            example:
+              pubkey: caja2@lacrypta.ar
+              label: Caja 2
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [minter]
+                properties:
+                  minter:
+                    $ref: "#/components/schemas/MinterJson"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /api/coupons/minters/{pubkey}:
+    parameters:
+      - name: pubkey
+        in: path
+        required: true
+        schema:
+          type: string
+        description: npub or hex (URL-encoded)
+    delete:
+      tags: [Minters]
+      summary: Revoke a minter
+      description: Does not touch already-minted coupons.
+      operationId: removeMinter
+      security:
+        - Nostr: []
+        - Bearer: []
+      responses:
+        "200":
+          description: Removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  removed:
+                    type: boolean
+              example:
+                removed: true
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/coupons/redemptions:
+    get:
+      tags: [Redemptions]
+      summary: Redemption history
+      description: Newest first, capped at 500. Closest thing to an orders table for zero-sat claims.
+      operationId: listRedemptions
+      security:
+        - Nostr: []
+        - Bearer: []
+      responses:
+        "200":
+          description: Redemptions
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [redemptions]
+                properties:
+                  redemptions:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/RedemptionJson"
+
+components:
+  securitySchemes:
+    Nostr:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: |
+        `Nostr <base64 of kind 27235 event>`. Tags: `u`, `method`, optional
+        `payload` (sha256 hex of body), and a random `nonce` to avoid replay.
+    Bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: 12h session from `POST /api/auth/session`.
+
+  parameters:
+    CouponId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    NoncePath:
+      name: nonce
+      in: path
+      required: true
+      schema:
+        type: string
+
+  responses:
+    BadRequest:
+      description: Invalid body or parameter (Spanish `error` message)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Unauthorized:
+      description: Invalid auth
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AuthError"
+    Forbidden:
+      description: Authenticated but not allowed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: No estás autorizado a emitir este cupón.
+    NotFound:
+      description: Missing or not yours (same answer either way)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Conflict:
+      description: State conflict
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Gone:
+      description: Expired or archived
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    RateLimited:
+      description: Rate limited
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/RateLimitError"
+    Unavailable:
+      description: No database or manager key
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          description: Spanish error string on the wire
+    AuthError:
+      allOf:
+        - $ref: "#/components/schemas/Error"
+        - type: object
+          properties:
+            reason:
+              type: string
+              enum:
+                - expired
+                - replay
+                - url-mismatch
+                - session-expired
+                - session-invalid
+                - malformed
+                - missing
+                - too-large
+    RateLimitError:
+      allOf:
+        - $ref: "#/components/schemas/Error"
+        - type: object
+          properties:
+            retryAfter:
+              type: integer
+              description: Seconds until the window frees up
+
+    Currency:
+      type: string
+      enum: [ARS, USD, SAT]
+
+    DiscountCap:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount:
+          type: number
+          exclusiveMinimum: 0
+        currency:
+          $ref: "#/components/schemas/Currency"
+
+    Benefit:
+      description: Discriminated union. Absent optional keys mean "all products" / "no cap" — never send null for those.
+      oneOf:
+        - type: object
+          required: [type, percent]
+          properties:
+            type:
+              const: percent
+            percent:
+              type: number
+            productDs:
+              type: array
+              items:
+                type: string
+            cap:
+              $ref: "#/components/schemas/DiscountCap"
+        - type: object
+          required: [type, amount, currency]
+          properties:
+            type:
+              const: fixed
+            amount:
+              type: number
+            currency:
+              $ref: "#/components/schemas/Currency"
+            productDs:
+              type: array
+              items:
+                type: string
+            cap:
+              $ref: "#/components/schemas/DiscountCap"
+        - type: object
+          required: [type, buyQty, payQty]
+          properties:
+            type:
+              const: multibuy
+            buyQty:
+              type: integer
+            payQty:
+              type: integer
+            productDs:
+              type: array
+              items:
+                type: string
+            cap:
+              $ref: "#/components/schemas/DiscountCap"
+        - type: object
+          required: [type, buyProductD, giftProductD]
+          properties:
+            type:
+              const: buyXgetY
+            buyProductD:
+              type: string
+            giftProductD:
+              type: string
+            cap:
+              $ref: "#/components/schemas/DiscountCap"
+        - type: object
+          required: [type, items]
+          properties:
+            type:
+              const: freeItems
+            items:
+              type: array
+              items:
+                type: object
+                required: [d, qty]
+                properties:
+                  d:
+                    type: string
+                  qty:
+                    type: integer
+            cap:
+              $ref: "#/components/schemas/DiscountCap"
+
+    DefinitionJson:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - image
+        - benefit
+        - maxUses
+        - minted
+        - claimed
+        - expiresAt
+        - archivedAt
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        image:
+          type: string
+          nullable: true
+        benefit:
+          oneOf:
+            - $ref: "#/components/schemas/Benefit"
+            - type: "null"
+        maxUses:
+          type: integer
+          nullable: true
+        minted:
+          type: integer
+        claimed:
+          type: integer
+        expiresAt:
+          type: integer
+          nullable: true
+          description: Unix seconds
+        archivedAt:
+          type: integer
+          nullable: true
+        createdAt:
+          type: integer
+        updatedAt:
+          type: integer
+
+    MintJson:
+      type: object
+      required: [nonce, status, mintedBy, mintedByNpub, mintedAt, claimedAt, voidedAt]
+      properties:
+        nonce:
+          type: string
+        status:
+          type: string
+          enum: [minted, claimed, voided]
+        mintedBy:
+          type: string
+        mintedByNpub:
+          type: string
+        mintedAt:
+          type: integer
+        claimedAt:
+          type: integer
+          nullable: true
+        voidedAt:
+          type: integer
+          nullable: true
+
+    MinterJson:
+      type: object
+      required: [pubkey, npub, label, createdAt]
+      properties:
+        pubkey:
+          type: string
+        npub:
+          type: string
+        label:
+          type: string
+          nullable: true
+        createdAt:
+          type: integer
+
+    RedemptionJson:
+      type: object
+      required: [nonce, claimedAt, couponId, name, benefit, order, orderId, amountMsat]
+      properties:
+        nonce:
+          type: string
+        claimedAt:
+          type: integer
+        couponId:
+          type: string
+        name:
+          type: string
+        benefit:
+          oneOf:
+            - $ref: "#/components/schemas/Benefit"
+            - type: "null"
+        order:
+          oneOf:
+            - $ref: "#/components/schemas/SignedEvent"
+            - type: "null"
+        orderId:
+          type: string
+          nullable: true
+        amountMsat:
+          type: integer
+          nullable: true
+          description: 0 means reclaimed (no invoice)
+
+    CouponPayloadJson:
+      type: object
+      required: [couponId, coupon, name, description, npub, image, nonce, expiresAt]
+      properties:
+        couponId:
+          type: string
+        coupon:
+          $ref: "#/components/schemas/Benefit"
+        name:
+          type: string
+        description:
+          type: string
+        npub:
+          type: string
+          description: Owner npub — check this is the shop you are charging
+        image:
+          type: string
+          nullable: true
+        nonce:
+          type: string
+        expiresAt:
+          type: integer
+          nullable: true
+
+    SignedEvent:
+      type: object
+      required: [id, pubkey, created_at, kind, tags, content, sig]
+      properties:
+        id:
+          type: string
+        pubkey:
+          type: string
+        created_at:
+          type: integer
+        kind:
+          type: integer
+        tags:
+          type: array
+          items:
+            type: array
+            items:
+              type: string
+        content:
+          type: string
+        sig:
+          type: string
+
+    DiscoveryContent:
+      type: object
+      required: [v, mintUrl, claimUrl]
+      properties:
+        v:
+          const: 2
+        mintUrl:
+          type: string
+          format: uri
+        claimUrl:
+          type: string
+          format: uri
+      description: |
+        Kind 30078 content (plaintext). Manager pubkey lives in tag `p`, not here.
+        `d` tag must be `lacrypta.merchant/coupons`.
+
+    SessionResponse:
+      type: object
+      required: [token, pubkey, expiresAt]
+      properties:
+        token:
+          type: string
+        pubkey:
+          type: string
+        expiresAt:
+          type: integer
+
+    ManagerResponse:
+      type: object
+      required: [pubkey, npub]
+      properties:
+        pubkey:
+          type: string
+        npub:
+          type: string
+
+    CouponsBundle:
+      type: object
+      required: [coupons, minters, discovery]
+      properties:
+        coupons:
+          type: array
+          items:
+            $ref: "#/components/schemas/DefinitionJson"
+        minters:
+          type: array
+          items:
+            $ref: "#/components/schemas/MinterJson"
+        discovery:
+          oneOf:
+            - $ref: "#/components/schemas/SignedEvent"
+            - type: "null"
+
+    CreateCouponBody:
+      type: object
+      required: [name, benefit]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        description:
+          type: string
+          maxLength: 500
+        image:
+          type: string
+          nullable: true
+        benefit:
+          $ref: "#/components/schemas/Benefit"
+        maxUses:
+          type: integer
+          nullable: true
+        expiresAt:
+          type: integer
+          nullable: true
+          description: Unix seconds; must be in the future on create
+
+    PatchCouponBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        image:
+          type: string
+          nullable: true
+        benefit:
+          $ref: "#/components/schemas/Benefit"
+        maxUses:
+          type: integer
+          nullable: true
+        expiresAt:
+          type: integer
+          nullable: true
+          description: Past date kills already-issued coupons
+        archived:
+          type: boolean
+
+    MintResponse:
+      allOf:
+        - $ref: "#/components/schemas/CouponPayloadJson"
+        - type: object
+          required: [voucher]
+          properties:
+            voucher:
+              $ref: "#/components/schemas/SignedEvent"
+
+    ClaimPreview:
+      allOf:
+        - $ref: "#/components/schemas/CouponPayloadJson"
+        - type: object
+          required: [status]
+          properties:
+            status:
+              type: string
+              enum: [minted, claimed, expired, voided]
+            claimedAt:
+              type: integer
+              nullable: true
+
+    ClaimBody:
+      type: object
+      required: [nonce]
+      properties:
+        nonce:
+          type: string
+        zapRequest:
+          $ref: "#/components/schemas/SignedEvent"
+        amountMsat:
+          type: integer
+          minimum: 0
+
+    ClaimResponse:
+      allOf:
+        - $ref: "#/components/schemas/CouponPayloadJson"
+        - type: object
+          required: [status, claimedAt, voucher]
+          properties:
+            status:
+              type: string
+              enum: [success, claimed]
+            claimedAt:
+              type: integer
+            voucher:
+              $ref: "#/components/schemas/SignedEvent"
+
+    MintableCoupon:
+      type: object
+      required: [id, name, description, image, coupon, npub, remaining, expiresAt]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        image:
+          type: string
+          nullable: true
+        coupon:
+          $ref: "#/components/schemas/Benefit"
+        npub:
+          type: string
+        remaining:
+          type: integer
+          nullable: true
+        expiresAt:
+          type: integer
+          nullable: true

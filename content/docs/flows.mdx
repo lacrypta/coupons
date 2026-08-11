@@ -1,0 +1,42 @@
+---
+title: Flows
+description: Activate → define → mint → claim. Decisions not to reverse.
+---
+
+## Activate
+
+```
+Merchant → GET /manager → signs 30078 (p = manager)
+        → PUT /discovery → stored + published
+```
+
+Until activated, the UI blocks creating coupons. A coupon nobody can discover is a row nobody can reach.
+
+## Mint & redeem (third-party POS)
+
+```
+POS → relays: newest 30078 by author + d
+   → POST mintUrl (NIP-98, authorized)
+   → verify voucher.pubkey === p
+   → show QR with nonce
+   → POST claimUrl { nonce }
+```
+
+## Storefront claim
+
+1. `GET claim?nonce=` — preview, check `npub` is this shop
+2. Show discount (nothing consumed yet)
+3. `POST claim` **before** invoice — coupon burns even if payment is abandoned
+4. Zero total → "Reclamar", `amountMsat: 0`, no invoice
+
+Order totals stay **gross**. Discount rides in `coupon` / `discount` tags.
+
+## Invariants
+
+| Decision | Why |
+|---|---|
+| Redeem before invoice | Better than invoicing a discount you cannot charge |
+| Already-claimed → `200` | Retries must not look like failures |
+| Archive stops minting only | Outstanding nonces still redeem |
+| Void keeps the row | Cashier needs "cancelled", not "typo" |
+| No idempotency on create/mint | Reconcile instead of blind retry |

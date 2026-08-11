@@ -1,0 +1,35 @@
+---
+title: Practices
+description: Short rules that keep tills and merchants honest.
+---
+
+## Discovery
+
+- Newest by **author + `d`**, then read `p`
+- Never subscribe by `#p` alone
+- Discard `v1` whole — no half-migration
+
+## Vouchers
+
+- Verify against the announcement's `p`
+- Rebuild canonical fields before `verifyEvent` if you mutate objects (`nostr-tools` memos survive spreads)
+- Optional keys are **omitted**, never `null`
+
+## Mint & claim
+
+- Benefit freezes at mint — edit definitions for future issuances only
+- Nonce is a bearer token — redact query strings in proxy logs
+- Claim before invoice
+- Already-claimed is `200`, not an error
+- Create/mint have no idempotency key — reconcile, don't blind-retry
+
+## Auth
+
+- Add a random `nonce` tag on every NIP-98 event
+- Re-mint Bearer on any `401`
+- Owner is never a row on their own minters list
+
+## Scope
+
+- Absent `productDs` / `cap` means all products / no ceiling
+- Never send `null` for those semantics
