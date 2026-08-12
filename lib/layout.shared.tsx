@@ -1,7 +1,8 @@
 import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Github } from 'lucide-react';
 
 export const MERCHANT_URL = 'https://merchant.lacrypta.ar';
+export const REPO_URL = 'https://github.com/lacrypta/coupons';
 
 export function Logo() {
   return (
@@ -30,6 +31,13 @@ export function baseOptions(): BaseLayoutProps {
         text: 'API',
         url: '/docs/api',
         active: 'nested-url',
+      },
+      {
+        type: 'icon',
+        icon: <Github className="size-4" />,
+        text: 'GitHub',
+        url: REPO_URL,
+        external: true,
       },
       {
         type: 'icon',

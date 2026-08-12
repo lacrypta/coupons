@@ -4,7 +4,7 @@
   "private": true,
   "description": "Protocol docs for La Crypta coupons — Nostr discovery, vouchers, and the Merchant manager API",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
     "types:check": "tsc --noEmit",
