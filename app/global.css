@@ -111,3 +111,56 @@ body {
     transparent 70%
   );
 }
+
+/* Scalar API client modal — the package ships Vue SFC scoped selectors
+   ([data-v-77897d1c]) that are missing from the rendered DOM, leaving the
+   modal background transparent. These overrides restore the intended layout. */
+.scalar .scalar-app-layout {
+  background: var(--scalar-background-1);
+  border: var(--scalar-border-width, 1px) solid var(--scalar-border-color);
+  border-radius: 8px;
+  width: 100%;
+  max-width: 1390px;
+  height: calc(100% - 120px);
+  margin: auto;
+  position: relative;
+  overflow: hidden;
+}
+
+@media (max-width: 720px) and (max-height: 480px) {
+  .scalar .scalar-app-layout {
+    height: 100%;
+    max-height: 90svh;
+  }
+}
+
+.scalar .scalar-app-exit {
+  cursor: pointer;
+  z-index: -1;
+  background: #00000038;
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+
+/* Scalar's dark-mode class is never applied by fumadocs when the theme is
+   forced to dark, so we define the variables ourselves. */
+.scalar-app {
+  --scalar-background-1: #0f0f0f;
+  --scalar-background-2: #1a1a1a;
+  --scalar-background-3: #272727;
+  --scalar-color-1: #e7e7e7;
+  --scalar-color-2: #a4a4a4;
+  --scalar-color-3: #797979;
+  --scalar-color-accent: #00aeff;
+  --scalar-background-accent: #3ea6ff1f;
+  --scalar-border-color: #2d2d2d;
+  --scalar-border-width: 1px;
+}
+
+.dark-mode .scalar .scalar-app-exit,
+.scalar-app .scalar-app-exit {
+  background: #00000073;
+}

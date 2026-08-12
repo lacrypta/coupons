@@ -3,6 +3,10 @@ title: Auth
 description: NIP-98 and Bearer sessions — same tenant, different trade-offs.
 ---
 
+<NostrAuthProvider>
+
+<NostrConnectBanner />
+
 | Route | Auth |
 |---|---|
 | `POST /api/auth/session` | NIP-98 **only** |
@@ -32,6 +36,16 @@ Verified cheap-first: shape → kind → **signature** → ±60s → `method` �
 
 Without a unique tag, two identical requests in the same second hash to the same id. Second call → `reason: "replay"`.
 
+### Try it
+
+Sign a NIP-98 event for any endpoint below. Copy the `Authorization` header or the full curl command.
+
+<Nip98SignButton method="GET" path="/api/coupons/manager" label="Sign GET manager" />
+
+<Nip98SignButton method="POST" path="/api/coupons/mint" body='{"couponId":"55b5ee4f-4dcc-4a6a-a58e-6d1d94d811a3"}' label="Sign POST mint" />
+
+<Nip98SignButton method="PUT" path="/api/coupons/discovery" body='{"v":2,"mintUrl":"https://merchant.lacrypta.ar/api/coupons/mint","claimUrl":"https://merchant.lacrypta.ar/api/coupons/claim"}' label="Sign PUT discovery" />
+
 ## Bearer
 
 Sign NIP-98 once → `POST /api/auth/session` → `Authorization: Bearer <jwt>` for 12 hours.
@@ -42,6 +56,10 @@ It is not more secure — it is fewer signatures. On a NIP-46 bunker, every NIP-
 - No logout — drop the token
 - Rotate `SESSION_JWT_SECRET` to invalidate everything
 
+<BearerSessionCard />
+
 ## Error `reason` values
 
 `expired` · `replay` · `url-mismatch` · `session-expired` · `session-invalid` · `malformed` · `missing` · `too-large`
+
+</NostrAuthProvider>
