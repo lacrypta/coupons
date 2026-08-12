@@ -4,7 +4,7 @@ info:
   version: "1.0.0"
   summary: Mint and redeem Nostr-advertised coupons
   description: |
-    HTTP surface for the coupon manager. Merchants advertise this service with a
+    HTTP surface for the Coupon Manager Service (CMS). Merchants advertise this service with a
     signed kind **30078**; vouchers are signed as kind **20402** and never published.
 
     Live implementation: https://merchant.lacrypta.ar
@@ -16,12 +16,12 @@ info:
     url: https://lacrypta.ar
 servers:
   - url: https://merchant.lacrypta.ar
-    description: Production (Merchant Manager)
+    description: Production (Coupon Manager Service)
 tags:
   - name: Auth
     description: Session minting
   - name: Manager
-    description: Public manager identity
+    description: Public CMS identity
   - name: Discovery
     description: Merchant announcement (kind 30078)
   - name: Definitions
@@ -64,13 +64,13 @@ paths:
   /api/coupons/manager:
     get:
       tags: [Manager]
-      summary: Manager pubkey
+      summary: CMS pubkey
       description: Public key that signs vouchers. Cacheable (`max-age=300`).
       operationId: getManager
       security: []
       responses:
         "200":
-          description: Manager identity
+          description: CMS identity
           content:
             application/json:
               schema:
@@ -608,7 +608,7 @@ components:
           schema:
             $ref: "#/components/schemas/RateLimitError"
     Unavailable:
-      description: No database or manager key
+      description: No database or CMS key
       content:
         application/json:
           schema:
@@ -909,7 +909,7 @@ components:
           type: string
           format: uri
       description: |
-        Kind 30078 content (plaintext). Manager pubkey lives in tag `p`, not here.
+        Kind 30078 content (plaintext). CMS pubkey lives in tag `p`, not here.
         `d` tag must be `lacrypta.merchant/coupons`.
 
     SessionResponse:

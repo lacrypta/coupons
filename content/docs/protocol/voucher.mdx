@@ -1,14 +1,14 @@
 ---
 title: Voucher
-description: Kind 20402 — manager-signed proof, never published.
+description: Kind 20402 — CMS-signed proof, never published.
 ---
 
-Signed by the **manager** with `COUPON_MANAGER_NSEC`. Travels in mint/claim JSON. **Never published to relays.**
+Signed by the **Coupon Manager Service (CMS)** with `COUPON_MANAGER_NSEC`. Travels in mint/claim JSON. **Never published to relays.**
 
 ```jsonc
 {
   "kind": 20402,
-  "pubkey": "<manager hex>",
+  "pubkey": "<CMS hex>",
   "tags": [
     ["nonce", "hcLPDzERvvHzS4Vn0OLbAQ"],
     ["p", "<owner hex>"],
@@ -42,8 +42,8 @@ Why **20402**: ephemeral range. If it leaks to a relay that follows the spec, it
 ```js
 import { verifyEvent } from "nostr-tools/pure"
 
-const managerPubkey = announcement.tags.find((t) => t[0] === "p")?.[1]
-if (voucher.pubkey !== managerPubkey) throw new Error("different issuer")
+const cmsPubkey = announcement.tags.find((t) => t[0] === "p")?.[1]
+if (voucher.pubkey !== cmsPubkey) throw new Error("different issuer")
 if (!verifyEvent(voucher)) throw new Error("invalid signature")
 
 const payload = JSON.parse(voucher.content)
@@ -51,4 +51,4 @@ if (payload.nonce !== response.nonce) throw new Error("different nonce")
 if (payload.owner !== expectedOwnerHex) throw new Error("different merchant")
 ```
 
-TLS proves the response came from the host. The manager signature proves it came from the service **the merchant named**.
+TLS proves the response came from the host. The CMS signature proves it came from the service **the merchant named**.

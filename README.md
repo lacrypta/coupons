@@ -1,6 +1,6 @@
 # coupons
 
-Protocol docs for **La Crypta coupons** — the Nostr framework to advertise a coupon manager, mint vouchers, and redeem them once.
+Protocol docs for **La Crypta coupons** — the Nostr framework to advertise a Coupon Manager Service, mint vouchers, and redeem them once.
 
 Live implementation: [merchant.lacrypta.ar](https://merchant.lacrypta.ar)  
 Canonical implementation repo: [`lacrypta/merchant`](https://github.com/lacrypta/merchant)
@@ -16,7 +16,7 @@ Intended host: `coupons.lacrypta.ar` (Vercel-friendly Next.js app).
 ## Develop
 
 ```bash
-nvm use   # Node 22.14+
+nvm use   # Node 24+
 npm install
 npm run dev
 ```
@@ -48,4 +48,4 @@ Protocol narrative is rewritten from `merchant/docs/cupones*.md`. Merchant remai
 
 ## Deploy
 
-Any Node 22 host that runs Next.js (Vercel recommended). Set the project root to this repo and build with `npm run build`.
+Any Node 24 host that runs Next.js (Vercel recommended). Set the project root to this repo and build with `npm run build`.

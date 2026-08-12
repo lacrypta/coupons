@@ -3,7 +3,7 @@ title: Overview
 description: Coupons any till can mint — advertised on Nostr, redeemed once.
 ---
 
-This server **mints and redeems coupons on a merchant's behalf**. The merchant authorizes it by signing a Nostr event that says where the service lives. Any POS that reads that event can mint and redeem without ever talking to us first.
+This **Coupon Manager Service (CMS)** **mints and redeems coupons on a merchant's behalf**. The merchant authorizes it by signing a Nostr event that says where the service lives. Any POS that reads that event can mint and redeem without ever talking to us first.
 
 Live implementation: [merchant.lacrypta.ar](https://merchant.lacrypta.ar)
 
@@ -12,11 +12,11 @@ Live implementation: [merchant.lacrypta.ar](https://merchant.lacrypta.ar)
 | Role | Job | Key |
 |---|---|---|
 | **Merchant** | Creates definitions, authorizes minters, signs the announcement | Theirs (NIP-07 / NIP-46) |
-| **Minter** | Mints for a merchant who authorized them | Theirs |
-| **Manager** | Signs vouchers — this deployment | `COUPON_MANAGER_NSEC` |
-| **Bearer** | Holds the nonce and redeems | None — the nonce is the credential |
+| **Minter** | Mint coupons for a merchant who authorized them | npub whitelisted by merchant |
+| **Coupon Manager Service (CMS)** | Create/Update/Delete/Burn coupons and sign vouchers | `COUPON_MANAGER_NSEC` |
+| **Bearer** | Holds the coupon code (nonce) and redeems | None — the nonce is the credential |
 
-One deployment serves **many merchants**. Everything is scoped by the pubkey that signed the request.
+One CMS deployment serves **many merchants**. Everything is scoped by the pubkey that signed the request.
 
 ## Why a database
 

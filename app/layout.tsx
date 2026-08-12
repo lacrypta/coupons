@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     template: '%s — coupons',
   },
   description:
-    'Nostr protocol for merchant coupons: discovery, vouchers, and the manager API.',
+    'Nostr protocol for merchant coupons: discovery, vouchers, and the Coupon Manager Service API.',
   metadataBase: new URL('https://coupons.lacrypta.ar'),
 };
 

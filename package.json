@@ -2,7 +2,7 @@
   "name": "coupons",
   "version": "0.1.0",
   "private": true,
-  "description": "Protocol docs for La Crypta coupons — Nostr discovery, vouchers, and the Merchant manager API",
+  "description": "Protocol docs for La Crypta coupons — Nostr discovery, vouchers, and the Coupon Manager Service API",
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build",
@@ -11,7 +11,7 @@
     "postinstall": "fumadocs-mdx"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   },
   "dependencies": {
     "@scalar/api-client-react": "^2.0.38",

@@ -28,7 +28,7 @@ const steps = [
   {
     number: '03',
     title: 'Use your lightning address',
-    body: 'Linked to your npub. Payment Gateways find your coupon manager from NIP-05 and start redeeming.',
+    body: 'Linked to your npub. Payment Gateways find your Coupon Manager Service (CMS) from NIP-05 and start redeeming.',
     illustration: LightningIllustration,
   },
 ];
@@ -36,28 +36,28 @@ const steps = [
 const flow = [
   {
     from: 'Merchant',
-    to: 'Coupon Manager',
-    text: 'Adds coupons into the Coupon Manager service.',
+    to: 'CMS',
+    text: 'Adds coupons into the Coupon Manager Service.',
   },
   {
     from: 'Merchant',
     to: 'Nostr',
-    text: 'Signs an updatable event assigning the manager — API URLs and npub.',
+    text: 'Signs an updatable event assigning the CMS — API URLs and npub.',
   },
   {
-    from: 'Coupon Manager',
+    from: 'CMS',
     to: '',
     text: 'Handles coupons and redeem status internally.',
   },
   {
     from: 'Merchant',
     to: 'Payment Gateway',
-    text: 'Signs in via lightning address (payments) and NIP-05 to retrieve the npub event identifying the manager.',
+    text: 'Signs in via lightning address (payments) and NIP-05 to retrieve the npub event identifying the CMS.',
   },
   {
     from: 'Payment Gateway',
-    to: 'Coupon Manager',
-    text: 'Connects to the manager from the announced API URLs.',
+    to: 'CMS',
+    text: 'Connects to the CMS from the announced API URLs.',
   },
   {
     from: 'User',
@@ -66,8 +66,8 @@ const flow = [
   },
   {
     from: 'Payment Gateway',
-    to: 'Coupon Manager',
-    text: 'Claims the coupon using the manager API.',
+    to: 'CMS',
+    text: 'Claims the coupon using the CMS API.',
   },
 ];
 
@@ -82,7 +82,7 @@ const standards = [
     icon: KeyRound,
     title: 'NIP-98',
     subtitle: 'HTTP Auth',
-    body: 'Manager and gateway endpoints authenticate with signed Nostr events instead of passwords or API keys.',
+    body: 'CMS and gateway endpoints authenticate with signed Nostr events instead of passwords or API keys.',
   },
 ];
 
@@ -228,7 +228,7 @@ export default function HomePage() {
               A protocol flow between three parties
             </h2>
             <p className="mt-4 text-lg text-[var(--color-fd-muted-foreground)]">
-              Merchant, Coupon Manager, and Payment Gateway coordinate over Nostr and a
+              Merchant, CMS, and Payment Gateway coordinate over Nostr and a
               small HTTP API.
             </p>
           </div>
@@ -325,7 +325,7 @@ export default function HomePage() {
               Ready to run it yourself?
             </h3>
             <p className="mx-auto mt-2 max-w-md text-[var(--color-fd-muted-foreground)]">
-              The live Coupon Manager is running on Merchant. Connect your Nostr keys and
+              The live CMS is running on Merchant. Connect your Nostr keys and
               mint your first coupon.
             </p>
             <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
