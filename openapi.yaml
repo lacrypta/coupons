@@ -28,6 +28,8 @@ tags:
     description: Coupon definitions
   - name: Mint
     description: Issue vouchers
+  - name: Refresh
+    description: Swap a nonce for its replacement
   - name: Claim
     description: Preview and redeem
   - name: Minters
@@ -324,6 +326,69 @@ paths:
                 $ref: "#/components/schemas/MintResponse"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "410":
+          $ref: "#/components/responses/Gone"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+
+  /api/coupons/refresh:
+    post:
+      tags: [Refresh]
+      summary: Swap a nonce for its replacement
+      description: |
+        This is the `refreshUrl` from the announcement. Burns `nonce` and mints
+        a replacement in the same transaction, carrying the **same** benefit
+        snapshot and the **same** `expiresAt`. Refresh is how a coupon changes
+        hands: the nonce is the credential, so re-minting it is the transfer.
+
+        `Idempotency-Key` is required. The key and the signed response are
+        stored on the burned row, and a retry with the same key replays that
+        response verbatim — never re-signed, because a different event `id`
+        breaks a receiver that already stored the first one.
+
+        Refuses anything not `minted` and unexpired. The burn is a conditional
+        update, so two callers racing the same nonce produce exactly one
+        replacement and one `409`.
+      operationId: refreshCoupon
+      security: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: |
+            Caller-chosen, opaque. Must not be derived from anything guessable:
+            a third party who can predict it can claim the retry.
+          schema:
+            type: string
+            minLength: 8
+            maxLength: 255
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshBody"
+            example:
+              nonce: hcLPDzERvvHzS4Vn0OLbAQ
+      responses:
+        "201":
+          description: Burned and replaced — the only place the new nonce appears
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MintResponse"
+        "200":
+          description: Replay of an earlier call with this key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MintResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "404":
           $ref: "#/components/responses/NotFound"
         "409":
@@ -793,7 +858,7 @@ components:
           type: string
         status:
           type: string
-          enum: [minted, claimed, voided]
+          enum: [minted, claimed, voided, refreshed]
         mintedBy:
           type: string
         mintedByNpub:
@@ -908,6 +973,14 @@ components:
         claimUrl:
           type: string
           format: uri
+        refreshUrl:
+          type: string
+          format: uri
+          description: |
+            Optional. Absent means the service does not support refresh, so
+            coupons from it cannot be transferred. Added to `v2` rather than
+            bumping the version, which would discard the document whole for
+            every existing reader.
       description: |
         Kind 30078 content (plaintext). CMS pubkey lives in tag `p`, not here.
         `d` tag must be `lacrypta.merchant/coupons`.
@@ -1012,10 +1085,26 @@ components:
           properties:
             status:
               type: string
-              enum: [minted, claimed, expired, voided]
+              enum: [minted, claimed, expired, voided, refreshed]
+              description: |
+                `refreshed` — the nonce was swapped and the value moved.
+                Distinct from `voided`, which means the merchant killed it.
+                The successor is deliberately not revealed: this is public.
             claimedAt:
               type: integer
               nullable: true
+
+    RefreshBody:
+      type: object
+      required: [nonce]
+      properties:
+        nonce:
+          type: string
+          minLength: 22
+          maxLength: 22
+          description: |
+            The nonce to burn. Its replacement is returned here and nowhere
+            else — the public preview must never echo a successor.
 
     ClaimBody:
       type: object

@@ -1,4 +1,11 @@
 {
   "title": "Protocol",
-  "pages": ["discovery", "voucher", "auth", "benefits"]
+  "pages": [
+    "discovery",
+    "voucher",
+    "refresh",
+    "transfer",
+    "auth",
+    "benefits"
+  ]
 }

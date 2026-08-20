@@ -14,7 +14,7 @@ Signed by **the merchant**, published to relays. It is the only thing that lets 
     ["p", "<CMS hex>"],
     ["client", "merchant-manager"]
   ],
-  "content": "{\"v\":2,\"mintUrl\":\"https://merchant.lacrypta.ar/api/coupons/mint\",\"claimUrl\":\"https://merchant.lacrypta.ar/api/coupons/claim\"}"
+  "content": "{\"v\":2,\"mintUrl\":\"…/api/coupons/mint\",\"claimUrl\":\"…/api/coupons/claim\",\"refreshUrl\":\"…/api/coupons/refresh\"}"
 }
 ```
 
@@ -26,6 +26,7 @@ Signed by **the merchant**, published to relays. It is the only thing that lets 
 | tag | `p` | CMS hex — vouchers verify against this |
 | content | `mintUrl` | Absolute POST URL |
 | content | `claimUrl` | Absolute GET/POST URL |
+| content | `refreshUrl` | Optional. Absent means no [refresh](/docs/protocol/refresh) |
 
 **CMS key is a tag, not content** — relays index tags. Filter `{"kinds":[30078],"#d":["lacrypta.merchant/coupons"],"#p":["<CMS>"]}` instead of downloading every announcement.
 
@@ -41,6 +42,7 @@ Never subscribe filtering by `#p` alone. Addressable events can hand back an old
 - Content is **plaintext** (this is an announcement, not credentials)
 - URLs must be `https` (localhost allowed for `npm run dev`)
 - `v1` announcements (CMS inside content, no `p`) are **dead** — merchants must re-sign
+- `refreshUrl` was added to `v2`, not `v3`. A version bump discards the document whole for every existing reader; an unknown key is ignored harmlessly
 - Kind 30078 is addressable: moving hosts is editing one event
 
 Get the CMS pubkey from [`GET /api/coupons/manager`](/docs/api), then sign and [`PUT /api/coupons/discovery`](/docs/api).

@@ -31,6 +31,18 @@ POS → relays: newest 30078 by author + d
 
 Order totals stay **gross**. Discount rides in `coupon` / `discount` tags.
 
+## Transfer
+
+```
+Sender → GET lnurlp(recipient) → allowVouchers?
+       → POST callback { action: voucher, nonce, voucher }
+Receiver → verify 20402 → pin the service → write intent
+         → POST refreshUrl → store replacement → ACCEPTED
+```
+
+The sender marks its own copy only on `ACCEPTED`, and on `ERROR` re-reads the
+service rather than believing the answer.
+
 ## Invariants
 
 | Decision | Why |
@@ -40,3 +52,6 @@ Order totals stay **gross**. Discount rides in `coupon` / `discount` tags.
 | Archive stops minting only | Outstanding nonces still redeem |
 | Void keeps the row | Cashier needs "cancelled", not "typo" |
 | No idempotency on create/mint | Reconcile instead of blind retry |
+| Refresh **requires** a key | Nothing is left to reconcile with once the nonce is burned |
+| Refreshed ≠ voided | One moved, one was killed — the bearer needs to tell them apart |
+| Receiver refreshes, then answers | A promise before the swap is a promise it cannot keep |
