@@ -38,6 +38,31 @@ curl -X POST https://merchant.lacrypta.ar/api/coupons/claim \
   -d '{"nonce":"hcLPDzERvvHzS4Vn0OLbAQ"}'
 ```
 
+## Refresh
+
+```bash
+curl -X POST https://merchant.lacrypta.ar/api/coupons/refresh \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: $(uuidgen)" \
+  -d '{"nonce":"hcLPDzERvvHzS4Vn0OLbAQ"}'
+```
+
+Reuse the same key to retry — it replays, it does not mint twice. The old nonce
+now previews as `refreshed`.
+
+## Transfer
+
+```bash
+# 1. does the recipient take coupons?
+curl -s https://wallet.example/.well-known/lnurlp/alice | jq .allowVouchers
+
+# 2. hand it over — the receiver refreshes and answers
+curl -X POST https://wallet.example/api/lud16/alice/cb \
+  -H "Content-Type: application/json" \
+  -d '{"action":"voucher","nonce":"hcLPDzERvvHzS4Vn0OLbAQ","voucher":{…}}'
+# → {"status":"ACCEPTED"}
+```
+
 ## Benefits
 
 ```jsonc

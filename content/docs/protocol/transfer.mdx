@@ -1,0 +1,63 @@
+---
+title: Transfer
+description: Send a coupon to a lightning address — LUD-16 carries it, refresh settles it.
+---
+
+**A wallet advertises that it takes coupons; a sender POSTs one to the same callback it would pay.** The receiver [refreshes](/docs/protocol/refresh) the nonce to take the coupon, then answers. Nothing is transferred until that refresh lands.
+
+```jsonc
+// GET https://wallet.example/.well-known/lnurlp/alice
+{
+  "tag": "payRequest",
+  "callback": "https://wallet.example/api/lud16/alice/cb",
+  "allowVouchers": true,          // ← absent or false: do not send
+  "minSendable": 1000,
+  "maxSendable": 1000000000,
+  "metadata": "[[\"text/identifier\",\"alice@wallet.example\"]]"
+}
+```
+
+`GET {callback}` stays ordinary LNURL-pay. `POST {callback}` is the action surface — the method is the discriminator, `action` leaves room for the next one.
+
+```jsonc
+// POST {callback}
+{
+  "action": "voucher",
+  "nonce": "hcLPDzERvvHzS4Vn0OLbAQ",
+  "voucher": { "kind": 20402, "…": "…" },   // the CMS-signed event
+  "comment": "for the coffee"               // optional, ≤200
+}
+```
+
+```jsonc
+{ "status": "ACCEPTED" }
+{ "status": "ERROR", "reason": "unknown coupon service" }
+```
+
+## Receiver
+
+Order matters — nothing unauthenticated may reach the network before it has passed the gates:
+
+1. Rate limit, by **recipient** first. An attacker rotates addresses, not victims
+2. Verify the 20402 signature
+3. Resolve the signer to a service you already know, and take the refresh URL **from your own record of it**
+4. Write the intent down *before* calling refresh
+5. `POST {refreshUrl}` with an `Idempotency-Key`
+6. Store the replacement, then answer
+
+## Trust
+
+A signature proves integrity, not authenticity. Anyone can generate a key, sign a flawless voucher for a shop they do not represent, and host a service that swears it is valid.
+
+**Never take `refreshUrl` from the request body.** Pin the service by pubkey and use the URL you already had. A first transfer from an unknown service is refused — that is the correct answer, not a gap.
+
+## Don't
+
+- Preview before refreshing — it is advisory, and the gap between the two is a race
+- Delete the sender's row on success — it is the only record of where the coupon went
+- Read a sender identity out of the body — LUD-16 has none, and a self-declared pubkey is worse than nothing
+- Answer `ACCEPTED` before the replacement is stored
+
+## Irreversible
+
+The receiver must be able to refresh before it can promise anything, so a dishonest one can take the coupon and answer `ERROR`. No ordering fixes this — the mirror protocol is the mirror scam. Senders must treat `ERROR` as *check the service*, never as *you still have it*, and wallets must say out loud that sending is final.

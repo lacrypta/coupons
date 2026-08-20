@@ -1,0 +1,63 @@
+---
+title: Refresh
+description: Burn a nonce, mint its replacement — the swap that moves a coupon.
+---
+
+**Hand it a nonce, get a different one back.** Same benefit, same expiry, new bearer credential. The old nonce dies in the same transaction. This is how a coupon changes hands without anyone having an account.
+
+```jsonc
+// POST {refreshUrl}
+// Idempotency-Key: 7f3a9c1e-...     ← required, see Replay
+{
+  "nonce": "hcLPDzERvvHzS4Vn0OLbAQ"
+}
+```
+
+Returns the same body as [mint](/docs/api/mint): payload plus a fresh signed **20402** with `phase: minted`. The response is the only place the replacement nonce ever appears.
+
+## Preserved
+
+| Field | Rule |
+|---|---|
+| Benefit | The snapshot from the original mint, byte for byte |
+| `expiresAt` | Unchanged — refresh is not an extension |
+| `couponId` | Same definition |
+
+Re-reading the benefit from the current definition would break [Freeze at mint](/docs/protocol/benefits). Refreshing must not be a way to pick up an edit, and it must not be a way to buy another month.
+
+## Replay
+
+`Idempotency-Key` is **required**. The burned row stores the key and the signed response; a retry with the same key replays that response verbatim.
+
+Mint says *reconcile instead of blind retry*. That does not work here: after a refresh the caller has lost the only key it could reconcile with. The old nonce is burned, the preview must not reveal its successor, and a bearer cannot list mints — that is owner-authenticated.
+
+Two rules make it safe:
+
+- **Never re-sign a replay.** A re-signed event has a different `id`, and a receiver that stored the first response now holds provenance that does not match.
+- **Never accept a missing key.** "No key, so return the existing replacement" hands the *same* new nonce to two racing callers. A clean rejection becomes a double-issue.
+
+## Race
+
+One winner, decided by the write:
+
+```sql
+UPDATE mints SET status = 'refreshed', refreshed_at = now(), refresh_key = $2
+ WHERE nonce = $1 AND status = 'minted'
+   AND (expires_at IS NULL OR expires_at > now())
+RETURNING id
+```
+
+Zero rows → `409`, no replacement. Never select-then-update: two transfers of the same nonce must not both mint.
+
+## Afterwards
+
+`GET claim?nonce=` on the old nonce reports `refreshed`, not `voided`. `voided` means the merchant killed the value; `refreshed` means it moved and still exists. A bearer who did not authorise the swap learns it was taken — that distinction is their only signal.
+
+The preview **must not** return the replacement nonce. It is unauthenticated: echoing the successor would make every transfer stealable by anyone who ever read the old code, the till included.
+
+## Don't
+
+- Treat refresh as authorisation — the nonce is the only credential, exactly as on claim
+- Extend `expiresAt`
+- Refresh anything not `minted` and unexpired
+- Return the successor anywhere but the winning response

@@ -22,6 +22,15 @@ description: Short rules that keep tills and merchants honest.
 - Claim before invoice
 - Already-claimed is `200`, not an error
 - Create/mint have no idempotency key — reconcile, don't blind-retry
+- Refresh **does** need one — there is nothing left to reconcile once the nonce is burned
+
+## Transfer
+
+- Pin the service by pubkey; never take `refreshUrl` from a request body
+- Write the intent down before you burn anything
+- Store the replacement before you answer `ACCEPTED`
+- `ERROR` from a receiver means *go read the service*, not *you still have it*
+- Never delete the sender's row — it is the only record of where the coupon went
 
 ## Auth
 
